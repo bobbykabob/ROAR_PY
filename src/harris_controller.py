@@ -1,13 +1,10 @@
+from PyGame_Viewer import PyGameViewer
 from roar_py_carla import roar_py_carla
 import roar_py_interface
 import carla
 import numpy as np
 import asyncio
-from typing import Optional, Dict, Any, List
-import pygame
-from PIL import Image
-import transforms3d
-from manual_control import ManualControlViewer
+from typing import Dict, Any, List
 
 def normalize_rad(rad : float):
     return (rad + np.pi) % (2 * np.pi) - np.pi
@@ -27,7 +24,7 @@ async def main():
     carla_client = carla.Client('127.0.0.1', 2000)
     carla_client.set_timeout(5.0)
     roar_py_instance = roar_py_carla.RoarPyCarlaInstance(carla_client)
-    manual_viewer = ManualControlViewer()
+    viewer = PyGameViewer()
     
     carla_world = roar_py_instance.world
     carla_world.set_asynchronous(True)
@@ -46,11 +43,20 @@ async def main():
     assert vehicle is not None
     camera = vehicle.attach_camera_sensor(
         roar_py_interface.RoarPyCameraSensorDataRGB, # Specify what kind of data you want to receive
-        np.array([-2.0 * vehicle.bounding_box.extent[0], 0.0, 3.0 * vehicle.bounding_box.extent[2]]), # relative position
-        np.array([0, 10/180.0*np.pi, 0]), # relative rotation
-        image_width=1024,
-        image_height=768
+        np.array([0.0 * vehicle.bounding_box.extent[0], 0.0, 20.0 * vehicle.bounding_box.extent[2]]), # relative position
+        np.array([0, 90/180.0*np.pi, 0]), # relative rotation
+        image_width=500,
+        image_height=250
     )
+    depth_camera = vehicle.attach_camera_sensor(
+        roar_py_interface.RoarPyCameraSensorDataDepth,
+        np.array([1.0 * vehicle.bounding_box.extent[0], 0.0, 1.0]), # relative position
+        np.array([0, 0/180.0*np.pi, 0]), # relative rotation
+        image_width=500,
+        image_height=250
+    )
+
+    
     assert camera is not None
     try:
         while True:
@@ -63,7 +69,9 @@ async def main():
 
             # Receive camera data and render it
             camera_data = await camera.receive_observation()
-            render_ret = manual_viewer.render(camera_data)
+            depth_camera_data = await depth_camera.receive_observation()
+            
+            render_ret = viewer.render(camera_data, depth_camera_data)
             # If user clicked the close button, render_ret will be None
             if render_ret is None:
                 break
@@ -91,7 +99,7 @@ async def main():
             steer_control = np.clip(steer_control, -1.0, 1.0)
 
             # Proportional controller to control the vehicle's speed towards 40 m/s
-            throttle_control = 0.05 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
+            throttle_control = 0.2 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
 
             control = {
                 "throttle": np.clip(throttle_control, 0.0, 1.0),

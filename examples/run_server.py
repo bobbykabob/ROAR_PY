@@ -2,7 +2,7 @@ import carla
 import roar_py_remote
 import roar_py_interface
 import roar_py_remote.services.base_stream_services.websocket_service
-import roar_py_carla
+from roar_py_carla import roar_py_carla
 import threading
 import asyncio
 from typing import Union
