@@ -75,7 +75,7 @@ async def main():
             # If user clicked the close button, render_ret will be None
             if render_ret is None:
                 break
-            
+            depth_value = render_ret
             # Find the waypoint closest to the vehicle
             current_waypoint_idx = filter_waypoints(
                 vehicle_location,
@@ -92,14 +92,35 @@ async def main():
             # Calculate delta angle towards the target waypoint
             delta_heading = normalize_rad(heading_to_waypoint - vehicle_rotation[2])
 
+            # Proportional controller to control the vehicle's speed towards 40 m/s
+            
+            throttle_control = 0.2 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
+
+            if depth_value < 25:
+                throttle_control = np.clip(throttle_control, 0, 0.3)
+            elif depth_value < 30 and depth_value > 25:
+                throttle_control = np.clip(throttle_control, 0, 0.5)
+            elif depth_value < 35 and depth_value > 30:
+                throttle_control = np.clip(throttle_control, 0, 0.8)
+            elif depth_value < 40 and depth_value > 35:
+                throttle_control = np.clip(throttle_control, 0, 1)
+
+            # use the throttle control to define the aggressiveness of the steer control
+            steer_value = -8.0
+            if throttle_control <= 0.5:
+                steer_value = -8.0
+            elif throttle_control < 0.8 and throttle_control > 0.5:
+                steer_value = -5.0
+            elif throttle_control > 0.8:
+                steer_value = -2.0
             # Proportional controller to steer the vehicle towards the target waypoint
+
             steer_control = (
-                -8.0 / np.sqrt(np.linalg.norm(vehicle.get_linear_3d_velocity())) * delta_heading / np.pi
+                steer_value / np.sqrt(np.linalg.norm(vehicle.get_linear_3d_velocity())) * delta_heading / np.pi
             ) if np.linalg.norm(vehicle.get_linear_3d_velocity()) > 1e-2 else -np.sign(delta_heading)
             steer_control = np.clip(steer_control, -1.0, 1.0)
 
-            # Proportional controller to control the vehicle's speed towards 40 m/s
-            throttle_control = 0.2 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
+            
 
             control = {
                 "throttle": np.clip(throttle_control, 0.0, 1.0),

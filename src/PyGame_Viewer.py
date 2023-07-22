@@ -1,6 +1,6 @@
 import numpy as np
 import pygame
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw
 import roar_py_interface
 from typing import Optional, Dict, Any
 
@@ -22,18 +22,22 @@ class PyGameViewer:
     def render(self, image : roar_py_interface.RoarPyCameraSensorData, image2 : roar_py_interface.RoarPyCameraSensorDataDepth) -> Optional[Dict[str, Any]]:
         image_pil = image.get_image()
         image2_np = image2.image_depth
-        #image2_np = image2_np[150:200, len(image2_np) - 100: len(image2_np) + 100]
+        image2_np = image2_np[100:150, len(image2_np) - 50: len(image2_np) + 50]
         #image2_np = np.log(image2_np)
         image2_np = np.clip(image2_np , 0, 40)
 
         min, max = np.min(image2_np), np.max(image2_np)
+        min, max = 0, 40
         normalized_image = (image2_np) / (max-min)
         normalized_image = (normalized_image * 255).astype(np.uint8)
         image2_pil = Image.fromarray(normalized_image,mode="L")
         #image2_pil = ImageOps.invert(image2_pil)
         if self.screen is None:
             self.init_pygame(image_pil.width + image2_pil.width, image_pil.height)
-            
+        
+        depth_value = np.average(image2_np)
+        depth_value_text = ImageDraw.Draw(image2_pil)
+        depth_value_text.text((2,2), str(depth_value), fill= 0)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -48,5 +52,5 @@ class PyGameViewer:
        
         pygame.display.flip()
         self.clock.tick(60)
-        return 1
+        return depth_value
     
