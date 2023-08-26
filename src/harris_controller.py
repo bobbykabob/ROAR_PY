@@ -94,21 +94,21 @@ async def main():
 
             # Proportional controller to control the vehicle's speed towards 40 m/s
             
-            throttle_control = 0.2 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
+            throttle_control = 0.175 * (20 - np.linalg.norm(vehicle.get_linear_3d_velocity()))
 
             if depth_value < 25:
                 throttle_control = np.clip(throttle_control, 0, 0.3)
             elif depth_value < 30 and depth_value > 25:
-                throttle_control = np.clip(throttle_control, 0, 0.5)
+                throttle_control = np.clip(throttle_control, 0, 0.4)
             elif depth_value < 35 and depth_value > 30:
-                throttle_control = np.clip(throttle_control, 0, 0.8)
+                throttle_control = np.clip(throttle_control, 0, 0.6)
             elif depth_value < 40 and depth_value > 35:
-                throttle_control = np.clip(throttle_control, 0, 1)
+                throttle_control = np.clip(throttle_control, 0, 0.8)
 
             # use the throttle control to define the aggressiveness of the steer control
-            steer_value = -8.0
+            steer_value = -7.0
             if throttle_control <= 0.5:
-                steer_value = -8.0
+                steer_value = -7.0
             elif throttle_control < 0.8 and throttle_control > 0.5:
                 steer_value = -5.0
             elif throttle_control > 0.8:
